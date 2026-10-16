@@ -1,0 +1,12 @@
+{
+  "hiraishin": {
+    "name": "飛雷神",
+    "display_name": {
+      "zh": "飛雷神",
+      "ja": "飛雷神",
+      "en": "Hiraishin"
+    },
+    "logo_url": "https://hiraishin.44san.com/mark.svg",
+    "kinds": ["feature", "bug", "other"]
+  }
+}

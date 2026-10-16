@@ -1,0 +1,7 @@
+# Copy to .dev.vars for local development. Never put production values here.
+# Cloudflare's Turnstile testing keys: always pass (secret 2x0000000000000000000000000000000AA always fails).
+# Overrides the empty TURNSTILE_SITE_KEY var in wrangler.jsonc for local dev only.
+TURNSTILE_SITE_KEY=1x00000000000000000000AA
+TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
+# At least 32 characters. Generate with: node -e "console.log(crypto.randomBytes(32).toString('base64url'))"
+ADMIN_TOKEN=replace_with_at_least_32_random_characters
