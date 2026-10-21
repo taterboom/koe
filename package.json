@@ -10,10 +10,9 @@
   "scripts": {
     "dev": "wrangler dev --local",
     "types": "wrangler types",
-    "check": "npm run types && tsc --noEmit && tsc --noEmit -p test && wrangler deploy --dry-run --env=\"\"",
+    "check": "npm run types && tsc --noEmit && tsc --noEmit -p test && wrangler deploy --dry-run",
     "test": "vitest run",
-    "deploy:test": "wrangler deploy --env=\"\"",
-    "deploy:production": "wrangler deploy --env production"
+    "deploy": "wrangler deploy"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.22.0",

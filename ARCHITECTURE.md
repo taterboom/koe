@@ -212,14 +212,9 @@ POST /admin/login  token=…
 
 ## 11. 环境与配置
 
-| | 测试环境 | 正式环境 |
-| --- | --- | --- |
-| 地址 | `koe-test.44san.com` | `koe.44san.com` |
-| Worker / D1 | `koe-test` / `koe-test` | `koe` / `koe` |
-| Turnstile | 一个 widget，两个域名共用 | 同一个 |
-| `ADMIN_TOKEN` | 测试环境单独一个 | 正式环境单独一个 |
+只有一个环境：正式环境 `koe.44san.com`，对应 Worker `koe` 和 D1 `koe`，用一个 Turnstile widget 和一个 `ADMIN_TOKEN`。
 
-`wrangler.jsonc` 顶层是测试环境，`--env production` 才是正式环境，这与 menkyo 一致。变量与密钥的说明见 README。
+起初和 menkyo 一样分了测试环境和正式环境。2026-10-21 撤掉了测试环境，原因有三：免费套餐的资源有限；这个服务功能简单，以后也很少改；测试环境不涉及付款或数据迁移这类需要在线上演练的流程。现在改动先在本地验证（`npm test` 跑的是真实的 workerd 和 D1，`npm run dev` 配 Turnstile 测试密钥），然后直接部署。变量与密钥的说明见 README。
 
 ## 12. 已知限制与以后可做
 

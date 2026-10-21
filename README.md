@@ -8,7 +8,7 @@
 
 ## 当前状态
 
-已实现并通过本地测试；**测试环境和正式环境都已上线**，Turnstile、Email Routing、邮件通知都已开通并实测。
+已上线（`https://koe.44san.com`），Turnstile、Email Routing、邮件通知都已开通并实测。进度与待办见 [STATUS.md](STATUS.md)。
 
 - `GET /<product>`：反馈页。字段为类型、内容（最多 2000 字）、回复邮箱（选填），加 Turnstile 人机验证。页面按 `config/products.json` 显示产品名和 logo，只显示该产品允许的反馈类型。中日英三语，规则与 menkyo 付款完成页相同：`?lang=` 优先，其次按浏览器语言，默认英文。
 - 链接只读取 `v`（版本）和 `lang` 两个参数，其他参数忽略、也不会回显。版本格式不对时按"未知"处理，反馈照常提交。
@@ -41,7 +41,7 @@ https://koe.44san.com/<product>?v=<产品版本>&lang=<zh|ja|en>
 ```sh
 npm ci
 cp .dev.vars.example .dev.vars        # 填一个至少 32 字符的 ADMIN_TOKEN；Turnstile 用的是官方测试密钥
-npx wrangler d1 migrations apply koe-test --local
+npx wrangler d1 migrations apply koe --local
 npm run dev                           # http://localhost:8787/hiraishin 、 /admin
 ```
 
@@ -55,53 +55,43 @@ npm run check     # 类型生成 + tsc + 部署预检，不会发布
 查看数据也可以直接用 SQL：
 
 ```sh
-npx wrangler d1 execute koe --env production --remote --command "SELECT id, product, kind, starred, created_at, content FROM feedback ORDER BY id DESC LIMIT 20"
+npx wrangler d1 execute koe --remote --command "SELECT id, product, kind, starred, created_at, content FROM feedback ORDER BY id DESC LIMIT 20"
 ```
 
 ## 环境变量
 
-**密钥（2 个）**：名称写在 `wrangler.jsonc` 的 `secrets.required` 中。本地放在 `.dev.vars`，线上用 `wrangler secret put <NAME> [--env production]` 设置。
+**密钥（2 个）**：名称写在 `wrangler.jsonc` 的 `secrets.required` 中。本地放在 `.dev.vars`，线上用 `wrangler secret put <NAME>` 设置。
 
 | 名称 | 用途 |
 | --- | --- |
 | `TURNSTILE_SECRET_KEY` | Turnstile 服务端校验。本地用官方测试密钥 `1x0000000000000000000000000000000AA`（永远通过） |
 | `ADMIN_TOKEN` | 后台登录，同时用来给会话 cookie 签名。至少 32 个字符：`node -e "console.log(crypto.randomBytes(32).toString('base64url'))"` |
 
-**普通变量（2 个）**：直接写在 `wrangler.jsonc` 的 `vars`，测试与正式环境各一份。
+**普通变量（2 个）**：直接写在 `wrangler.jsonc` 的 `vars`。
 
 | 名称 | 用途 |
 | --- | --- |
 | `TURNSTILE_SITE_KEY` | Turnstile 公开站点密钥，为空时反馈页返回 503。本地开发由 `.dev.vars` 覆盖为官方测试 key |
 | `MAIL_FROM` | 通知邮件的发件人，必须是开启了 Email Routing 的域名下的地址（`koe@44san.com`） |
 
-## 环境与部署
+## 部署与线上配置
 
-| | 测试环境 | 正式环境 |
-| --- | --- | --- |
-| 地址 | `https://koe-test.44san.com` | `https://koe.44san.com` |
-| Worker / D1 | `koe-test` / `koe-test` | `koe` / `koe` |
-| 部署 | `npm run deploy:test` | `npm run deploy:production` |
+只有一个环境，就是正式环境。服务小、改动少，所以不单独部署测试环境：改动先在本地跑通（`npm test`、`npm run dev`），再直接部署。
 
-`wrangler.jsonc` 顶层是测试环境，`npm run dev` 和不带参数的部署都碰不到正式环境。
+| | |
+| --- | --- |
+| 地址 | `https://koe.44san.com`（后台 `/admin`） |
+| Worker / D1 | `koe` / `koe` |
+| 部署 | `npm run deploy`；有新迁移时先执行 `npx wrangler d1 migrations apply koe --remote` |
+| Turnstile | widget `koe`，站点密钥 `0x4AAAAAAFYRXdO-syJF90ED`，只绑定 `koe.44san.com` |
+| 邮件 | 44san.com 已开启 Email Routing，`koe@44san.com` 转发到开发者的 Gmail |
 
-## 上线记录与待办
+- **通知收件人**：免费套餐只能发到已验证的地址，实测**不能**直接发到 `koe@44san.com`（返回 `E_RECIPIENT_NOT_ALLOWED`）。所以后台的邮件渠道填那个 Gmail，`koe@44san.com` 只用作发件人和对外地址。
+- **密钥保管**：`ADMIN_TOKEN` 和 Turnstile 私钥已存进密码管理器；Turnstile 私钥也可以在 Cloudflare 后台查看。
+- **限流暂不配置**：免费套餐每个域名只能建一条速率限制规则，已给了 menkyo。改用付费套餐后，在 Cloudflare 后台 → 44san.com → Security → WAF → Rate limiting rules 给 Koe 单独建一条，只限制 POST、按 IP 计数：
 
-已完成（2026-10-16）：
-- D1 `koe-test`、`koe` 已建好并迁移；两个环境已部署到 `koe-test.44san.com`、`koe.44san.com`。
-- Turnstile widget `koe`（站点密钥 `0x4AAAAAAFYRXdO-syJF90ED`）同时用于两个域名；私钥已设为两个环境的 secret。
-- 44san.com 已开启 Email Routing，`koe@44san.com` 转发到开发者的 Gmail。
-  - 实测免费套餐**不能**直接发到 `koe@44san.com`，会返回 `E_RECIPIENT_NOT_ALLOWED`。所以两个环境的通知渠道都填那个已验证的 Gmail。
-  - `koe@44san.com` 仍是发件人和对外地址。
-- 两个环境的后台都已发出测试通知。后台口令和 Turnstile 私钥已存进密码管理器；Turnstile 私钥也可以在 Cloudflare 后台查看。
-- 飛雷神已接入，官网已重新部署：首页三语页脚和三语隐私页都带 Koe 链接。设置页里的入口随下一个扩展版本发布。
+  ```text
+  (http.host eq "koe.44san.com" and http.request.method eq "POST")
+  ```
 
-暂不配置限流：免费套餐每个域名只能建一条速率限制规则，这一条现在给了 menkyo。改用付费套餐后，再给 Koe 单独建一条，在 Cloudflare 后台 → 44san.com → Security → WAF → Rate limiting rules 新建。建议表达式（只限制 POST，按 IP 计数）：
-
-```text
-(http.host in {"koe.44san.com" "koe-test.44san.com"} and http.request.method eq "POST")
-```
-
-在此之前，提交靠 Turnstile 挡机器人。后台登录靠至少 32 位的随机 `ADMIN_TOKEN`，在线暴力猜测不可行。
-
-还剩（需要你操作）：
-1. **44san 总的隐私说明**（如果有）：写明反馈长期保存、如何申请删除、用到的外部服务（Cloudflare、飞书）。
+  在此之前，提交靠 Turnstile 挡机器人。后台登录靠至少 32 位的随机 `ADMIN_TOKEN`，在线暴力猜测不可行。

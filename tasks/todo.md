@@ -9,7 +9,7 @@
 - 提交：字节上限读表单 → 校验产品 / 类型 / 内容 / 邮箱 → Turnstile siteverify → 写 D1 → `waitUntil` 发通知。通知失败只记日志。
 - 后台：`ADMIN_TOKEN` 登录，cookie = `过期时间.HMAC(ADMIN_TOKEN, 过期时间)`，HttpOnly、Secure、SameSite=Strict、Path=/admin，7 天；POST 同时校验 Origin。
 - 通知：邮件走 `send_email` 绑定（发件人 `MAIL_FROM`，Reply-To 设为用户邮箱）；飞书 / Lark 自定义机器人（可选签名），只接受官方 webhook 域名。
-- 环境：与 menkyo 相同，顶层是测试环境 `koe-test.44san.com`，`env.production` 是 `koe.44san.com`。
+- 环境：起初与 menkyo 相同，分测试和正式两个环境；2026-10-21 撤掉了测试环境，只保留 `koe.44san.com`。
 
 ## 数据与读写成本
 
@@ -43,4 +43,13 @@
 - 浏览器冒烟（本地 wrangler dev + 官方 Turnstile 测试 key）：中 / 日 / 英反馈页、提交跳确认页、D1 落库、后台登录回跳、改状态、添加邮件渠道、测试通知、新反馈邮件内容；无 CSP 违规。
 - 冒烟发现并修复：页面统一的 `Referrer-Policy: no-referrer` 会让浏览器在表单 POST 时发 `Origin: null`，后台所有操作被同源校验拒绝。后台页改为 `same-origin`，并加了测试。
 - 打包 49 KiB（gzip 15 KiB），无运行时依赖。
-- 未验证：真实飞书 webhook（按官方文档实现签名，测试按同一算法核对）；线上 Email Routing 能否直接发到 `koe@44san.com`（README 上线待办第 4 步）。
+- 未验证：真实飞书 webhook（按官方文档实现签名，测试按同一算法核对）。Email Routing 已实测：不能直接发到 `koe@44san.com`，通知改发已验证的 Gmail。
+
+## 撤掉测试环境（2026-10-21）
+
+- [x] `wrangler.jsonc` 只保留正式环境（Worker 名仍是 `koe`，原有 secrets 和域名不变）；脚本合并成 `npm run deploy`
+- [x] 重新部署正式环境：健康检查、反馈页、Turnstile 站点密钥、后台拒绝未登录都正常，两个 secret 都在
+- [x] 删除云端的 `koe-test` Worker（连同 `koe-test.44san.com` 域名）和 `koe-test` D1（里面只有 3 条测试反馈）
+- [x] Turnstile widget 的域名只留 `koe.44san.com`
+- [x] README、ARCHITECTURE §11 同步更新；新建 STATUS.md
+- 验证：`npm test` 17/17，`npm run check` 通过
